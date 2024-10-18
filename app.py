@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import random
 import uuid
+import os
 
 app = Flask(__name__)
 
@@ -34,22 +35,35 @@ def check_inventory(product_id):
         return jsonify(inventory[product_id]), 200
     return jsonify({"error": "Product not found"}), 404
 
-@app.route('/order/<string:order_id>/status', methods=['PUT'])
-def update_order_status(order_id):
+@app.route('/payment', methods=['POST'])
+def process_payment():
     data = request.json
-    new_status = data.get('status')
+    order_id = data.get('order_id')
+    amount = data.get('amount')
     
     if order_id not in order_statuses:
         return jsonify({"error": "Order not found"}), 404
     
-    order_statuses[order_id] = new_status
-    return jsonify({"message": f"Order {order_id} status updated to {new_status}"}), 200
+    order_statuses[order_id] = 'paid'
+    return jsonify({"message": f"Payment for order {order_id} processed successfully"}), 200
 
-@app.route('/product/<int:product_id>', methods=['GET'])
-def get_product_info(product_id):
-    if product_id in products:
-        return jsonify(products[product_id]), 200
-    return jsonify({"error": "Product not found"}), 404
+# เพิ่มการอัปโหลดไฟล์ขนาดใหญ่ (1GB ขึ้นไป)
+@app.route('/upload', methods=['POST'])
+def upload_large_file():
+    file = request.data
+    file_size = len(file)
+    
+    if file_size >= 1 * 1024 * 1024 * 1024:  # ไฟล์ต้องมีขนาด >= 1GB
+        return jsonify({"message": "Large file uploaded successfully", "file_size": file_size}), 200
+    return jsonify({"error": "File too small"}), 400
+
+# เพิ่มการประมวลผล JSON ขนาดใหญ่
+@app.route('/process-large-json', methods=['POST'])
+def process_large_json():
+    data = request.json
+    if 'data' in data and len(data['data']) >= 1 * 1024 * 1024 * 1024:  # ข้อมูลขนาด >= 1GB
+        return jsonify({"message": "Large JSON processed successfully"}), 200
+    return jsonify({"error": "JSON data too small"}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    app.run(debug=True)
